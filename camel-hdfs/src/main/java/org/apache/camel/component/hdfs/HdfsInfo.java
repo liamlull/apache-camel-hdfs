@@ -16,12 +16,14 @@
  */
 package org.apache.camel.component.hdfs;
 
-import java.io.IOException;
-import java.net.URI;
-
+import org.apache.camel.component.hdfs.kerberos.HdfsKerberosConfigurationFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
 
 public final class HdfsInfo {
 
@@ -29,11 +31,9 @@ public final class HdfsInfo {
     private FileSystem fileSystem;
     private Path path;
 
-    HdfsInfo(String hdfsPath) throws IOException {
-        this.conf = new Configuration();
-        // this will connect to the hadoop hdfs file system, and in case of no connection
-        // then the hardcoded timeout in hadoop is 45 x 20 sec = 15 minutes
-        this.fileSystem = FileSystem.get(URI.create(hdfsPath), conf);
+    HdfsInfo(String hdfsPath, HdfsConfiguration configuration) throws IOException {
+        this.conf = newConfiguration(configuration);
+        this.fileSystem = newFileSystem(hdfsPath, configuration);
         this.path = new Path(hdfsPath);
     }
 
@@ -48,4 +48,32 @@ public final class HdfsInfo {
     public Path getPath() {
         return path;
     }
+
+    private static Configuration newConfiguration(HdfsConfiguration configuration) throws IOException {
+        Configuration hdfsConfiguration = new Configuration();
+
+        if (configuration.isKerberosAuthentication()) {
+            List<String> namedNodes = configuration.getKerberosNamedNodeList();
+            String kerberosConfigFileLocation = configuration.getKerberosConfigFileLocation();
+            int dfsReplicationFactor = configuration.getReplication();
+            HdfsKerberosConfigurationFactory.setupKerberosHdfsConfiguration(hdfsConfiguration, namedNodes, kerberosConfigFileLocation, dfsReplicationFactor);
+        }
+
+        return hdfsConfiguration;
+    }
+
+    /**
+     * this will connect to the hadoop hdfs file system, and in case of no connection
+     * then the hardcoded timeout in hadoop is 45 x 20 sec = 15 minutes
+     */
+    private FileSystem newFileSystem(String hdfsPath, HdfsConfiguration configuration) throws IOException {
+        if (configuration.isKerberosAuthentication()) {
+            String userName = configuration.getKerberosUsername();
+            String keytabLocation = configuration.getKerberosKeytabLocation();
+            HdfsKerberosConfigurationFactory.loginWithKeytab(conf, userName, keytabLocation);
+        }
+
+        return FileSystem.get(URI.create(hdfsPath), conf);
+    }
+
 }

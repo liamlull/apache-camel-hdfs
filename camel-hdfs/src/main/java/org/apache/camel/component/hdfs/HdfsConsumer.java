@@ -77,7 +77,7 @@ public final class HdfsConsumer extends ScheduledPollConsumer {
         }
 
         // hadoop will cache the connection by default so its faster to get in the poll method
-        HdfsInfo answer = HdfsInfoFactory.newHdfsInfo(this.hdfsPath.toString());
+        HdfsInfo answer = HdfsInfoFactory.newHdfsInfo(this.hdfsPath.toString(), config);
 
         if (onStartup) {
             log.info("Connected to hdfs file-system {}:{}/{}", config.getHostName(), config.getPort(), hdfsPath);
@@ -92,11 +92,11 @@ public final class HdfsConsumer extends ScheduledPollConsumer {
     @Override
     protected int poll() throws Exception {
         // need to remember auth as Hadoop will override that, which otherwise means the Auth is broken afterwards
-        Configuration auth = HdfsComponent.getJAASConfiguration();
+        Configuration auth = config.getJAASConfiguration();
         try {
             return doPoll();
         } finally {
-            HdfsComponent.setJAASConfiguration(auth);
+            config.setJAASConfiguration(auth);
         }
     }
 
@@ -111,7 +111,7 @@ public final class HdfsConsumer extends ScheduledPollConsumer {
         int numMessages = 0;
 
         HdfsInfo info = setupHdfs(false);
-        FileStatus fileStatuses[];
+        FileStatus[] fileStatuses;
         if (info.getFileSystem().isFile(info.getPath())) {
             fileStatuses = info.getFileSystem().globStatus(info.getPath());
         } else {
