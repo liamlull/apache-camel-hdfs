@@ -34,7 +34,7 @@ public class HdfsKerberosConfigurationFactory {
      * All named nodes have to be qualified: configuration.set("dfs.ha.namenodes.hfdsNamedService","namenode1,namenode2");
      * For each named node the following entries is added
      * <p>
-     * configuration.set("dfs.namenode.rpc-address.hfdsNamedService.namenode1", "lsrv123.linux.rabo.nl:1234");
+     * configuration.set("dfs.namenode.rpc-address.hfdsNamedService.namenode1", "namenode1:1234");
      * <p>
      * Finally the proxy provider has to be specified:
      * <p>
