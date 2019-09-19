@@ -73,11 +73,11 @@ public enum HdfsFileType {
         }
 
         @Override
-        public long next(HdfsInputStream hdfsistr, Holder<Object> key, Holder<Object> value) {
+        public long next(HdfsInputStream hdfsInputStream, Holder<Object> key, Holder<Object> value) {
             try {
-                ByteArrayOutputStream bos = new ByteArrayOutputStream(hdfsistr.getChunkSize());
-                byte buf[] = new byte[hdfsistr.getChunkSize()];
-                int bytesRead = ((InputStream) hdfsistr.getIn()).read(buf);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream(hdfsInputStream.getChunkSize());
+                byte[] buf = new byte[hdfsInputStream.getChunkSize()];
+                int bytesRead = ((InputStream) hdfsInputStream.getIn()).read(buf);
                 if (bytesRead >= 0) {
                     bos.write(buf, 0, bytesRead);
                     key.value = null;

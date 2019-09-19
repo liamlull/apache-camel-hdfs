@@ -17,6 +17,7 @@
 package org.apache.camel.component.hdfs;
 
 import org.apache.camel.component.hdfs.kerberos.HdfsKerberosConfigurationFactory;
+import org.apache.camel.component.hdfs.kerberos.KerberosConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -27,18 +28,18 @@ import java.util.List;
 
 public final class HdfsInfo {
 
-    private Configuration conf;
+    private Configuration configuration;
     private FileSystem fileSystem;
     private Path path;
 
-    HdfsInfo(String hdfsPath, HdfsConfiguration configuration) throws IOException {
-        this.conf = newConfiguration(configuration);
-        this.fileSystem = newFileSystem(hdfsPath, configuration);
+    HdfsInfo(String hdfsPath, HdfsConfiguration endpointConfig) throws IOException {
+        this.configuration = newConfiguration(endpointConfig);
+        this.fileSystem = newFileSystem(this.configuration, hdfsPath, endpointConfig);
         this.path = new Path(hdfsPath);
     }
 
     public Configuration getConf() {
-        return conf;
+        return configuration;
     }
 
     public FileSystem getFileSystem() {
@@ -49,31 +50,30 @@ public final class HdfsInfo {
         return path;
     }
 
-    private static Configuration newConfiguration(HdfsConfiguration configuration) throws IOException {
-        Configuration hdfsConfiguration = new Configuration();
+    private Configuration newConfiguration(HdfsConfiguration endpointConfig) throws IOException {
+        if (endpointConfig.isKerberosAuthentication()) {
+            List<String> namedNodes = endpointConfig.getKerberosNamedNodeList();
+            String kerberosConfigFileLocation = endpointConfig.getKerberosConfigFileLocation();
+            return new KerberosConfiguration(namedNodes, kerberosConfigFileLocation, endpointConfig.getReplication());
 
-        if (configuration.isKerberosAuthentication()) {
-            List<String> namedNodes = configuration.getKerberosNamedNodeList();
-            String kerberosConfigFileLocation = configuration.getKerberosConfigFileLocation();
-            int dfsReplicationFactor = configuration.getReplication();
-            HdfsKerberosConfigurationFactory.setupKerberosHdfsConfiguration(hdfsConfiguration, namedNodes, kerberosConfigFileLocation, dfsReplicationFactor);
+        } else {
+            return new Configuration();
+
         }
-
-        return hdfsConfiguration;
     }
 
     /**
      * this will connect to the hadoop hdfs file system, and in case of no connection
      * then the hardcoded timeout in hadoop is 45 x 20 sec = 15 minutes
      */
-    private FileSystem newFileSystem(String hdfsPath, HdfsConfiguration configuration) throws IOException {
-        if (configuration.isKerberosAuthentication()) {
-            String userName = configuration.getKerberosUsername();
-            String keytabLocation = configuration.getKerberosKeytabLocation();
-            HdfsKerberosConfigurationFactory.loginWithKeytab(conf, userName, keytabLocation);
+    private FileSystem newFileSystem(Configuration configuration, String hdfsPath, HdfsConfiguration endpointConfig) throws IOException {
+        if (endpointConfig.isKerberosAuthentication()) {
+            String userName = endpointConfig.getKerberosUsername();
+            String keytabLocation = endpointConfig.getKerberosKeytabLocation();
+            ((KerberosConfiguration)configuration).loginWithKeytab(userName, keytabLocation);
         }
 
-        return FileSystem.get(URI.create(hdfsPath), conf);
+        return FileSystem.get(URI.create(hdfsPath), configuration);
     }
 
 }
